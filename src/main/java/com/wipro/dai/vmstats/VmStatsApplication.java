@@ -56,8 +56,6 @@ public class VmStatsApplication implements CommandLineRunner {
 //		virtualMachineService.createVirtualMachine(vm2);
 //		virtualMachineService.createVirtualMachine(vm3);
 //
-//
-//
 		virtualMachineService.registerMachine();
 	}
 
