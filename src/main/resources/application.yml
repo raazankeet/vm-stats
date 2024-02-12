@@ -1,0 +1,13 @@
+spring:
+  server:
+    port: 9095
+  datasource:
+    url: jdbc:mariadb://192.168.1.108:3306/grafanadb
+    username: grafanauser
+    password: ankitrajdba
+    driver-class-name: org.mariadb.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MariaDBDialect
+    hibernate:
+      ddl-auto: update
+
