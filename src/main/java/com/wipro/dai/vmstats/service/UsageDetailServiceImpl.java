@@ -34,12 +34,11 @@ public class UsageDetailServiceImpl implements UsageDetailService {
     @Transactional
     public void updateVMStats(VMStatsData vmStatsData) throws VirtualMachineNotFoundException {
         String machineName=vmStatsData.getMachineName();
-        log.info("Updating VM stats for machine: {}, VMStatsData: {}", machineName, vmStatsData);
         updateCPUUsage(machineName, vmStatsData.getCpuUtilization());
         updateMemoryUsage(machineName, vmStatsData.getTotalPhysicalMemory(), vmStatsData.getAvailablePhysicalMemory());
         updateDiskUsage(machineName, vmStatsData.getTotalDiskSize(), vmStatsData.getFreeDiskSpace());
         updateNetworkUsage(machineName, vmStatsData.getNetworkIn(), vmStatsData.getNetworkOut());
-        log.info("VM stats update completed for machine: {}", machineName);
+
     }
 
     @Override
@@ -64,7 +63,7 @@ public class UsageDetailServiceImpl implements UsageDetailService {
         memoryUsage.setVirtualMachine(virtualMachine);
         memoryUsage.setTotalMemoryWithScale(totalMemory,2);
         memoryUsage.setAvailableMemoryWithScale(availableMemory,2);
-        memoryUsage.setUsedMemoryPCTWithScale((100 - ((double) availableMemory / totalMemory * 100)),2);
+        memoryUsage.setUsedMemoryPCTWithScale(((double) (totalMemory - availableMemory)/totalMemory)*100,2);
         memoryUsage.setEntryDate(LocalDateTime.now());
         memoryUsageRepository.save(memoryUsage);
         log.debug("Memory usage updated for machine: {}", machineName);

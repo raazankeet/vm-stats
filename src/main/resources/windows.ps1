@@ -6,7 +6,7 @@ function Get-SystemMetrics {
     $totalPhysicalMemoryInMB = [math]::Round($totalPhysicalMemoryInBytes / 1MB, 2)
 	
 	$operatingSystem = Get-CimInstance -ClassName Win32_OperatingSystem
-    $availableMemoryInBytes = $operatingSystem.FreePhysicalMemory
+    $availableMemoryInBytes = $operatingSystem.FreePhysicalMemory*1024
 
 
 
@@ -31,7 +31,7 @@ function Get-SystemMetrics {
 
 
     return @{
-        "MachineName" = $env:COMPUTERNAME
+        "MachineName" = hostname
         "TotalPhysicalMemory" = $totalPhysicalMemoryInBytes
 		"AvailableMemory" = $availableMemoryInBytes
         "CpuUsage" = $cpuUsage
