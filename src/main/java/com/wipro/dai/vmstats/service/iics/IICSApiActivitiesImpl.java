@@ -6,9 +6,11 @@ import com.wipro.dai.vmstats.exception.IICSLoginException;
 import com.wipro.dai.vmstats.exception.IICSLogoutException;
 import com.wipro.dai.vmstats.model.IICS.*;
 import com.wipro.dai.vmstats.util.ApiCall;
+import com.wipro.dai.vmstats.util.ApiCallWithList;
 import com.wipro.dai.vmstats.util.FileDownloader;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -16,22 +18,38 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 
+import java.util.List;
+
 @Service
 @Slf4j
 public class IICSApiActivitiesImpl implements IICSApiActivities {
-    @Value("${iics.baseAPIUrl}")
-    private String baseAPIUrl;
 
-    @Value("${iics.username}")
+    @Value("${iics.credentials.username}")
     private String username;
 
-    @Value("${iics.password}")
+    @Value("${iics.credentials.password}")
     private String password;
+    @Value("${iics.urls.allorgURI}")
+    private String allorgURI;
+    @Value("${iics.urls.loginURI}")
+    private String loginURI;
+    @Value("${iics.urls.logoutURI}")
+    private String logoutURI;
+
+    @Value("${iics.urls.baseAPIURL}")
+    private String baseAPIUrl;
+
+    @Value("${iics.urls.exportMeteringDataURI}")
+    private String exportMeteringDataURI;
+    @Value("${iics.schedules.maxRetries}")
+    private int maxRetries;
+    @Value("${iics.schedules.delaySecondsBetweenRetries}")
+    private long delaySecondsBetweenRetries;
 
 
     @Override
     public LoginResponse login() throws IICSLoginException {
-        String loginUrl = baseAPIUrl + "/saas/public/core/v3/login";
+        String loginUrl = baseAPIUrl + loginURI;
         log.info("Performing IICS login");
         log.debug("Performing IICS login: url={}, username={}", loginUrl, username);
 
@@ -78,7 +96,7 @@ public class IICSApiActivitiesImpl implements IICSApiActivities {
 
     @Override
     public boolean logout(String sessionId) throws IICSLogoutException {
-        String logoutURL = baseAPIUrl + "/saas/public/core/v3/logout";
+        String logoutURL = baseAPIUrl + logoutURI;
 
         log.info("Performing IICS logout");
         log.debug(
@@ -107,14 +125,12 @@ public class IICSApiActivitiesImpl implements IICSApiActivities {
             ExportMeteringJobBody exportMeteringJobBody)
             throws IICSLoginException, ExportMeteringJobException {
         String exportURL = podURL
-                + "/public/core/v3/license/metering/ExportMeteringDataAllLinkedOrgsAcrossRegion";
+                + allorgURI;
 
-        log.info("Performing ExportMeteringDataAllLinkedOrgsAcrossRegion");
-        log.info("ExportURL:" + exportURL);
-        log.info("exportMeteringJobBody:" + exportMeteringJobBody);
-        //        log.info("Performing ExportMeteringDataAllLinkedOrgsAcrossRegion:
-        //        baseApiUrl={}, exportMeteringJobBody={}",
-        //                exportURL, exportMeteringJobBody);
+
+                log.debug("Performing ExportMeteringDataAllLinkedOrgsAcrossRegion: " +
+                                "exportURL={}, exportMeteringJobBody={}",
+                        exportURL, exportMeteringJobBody);
 
         String method = "post";
         HttpHeaders headers = new HttpHeaders();
@@ -156,11 +172,11 @@ public class IICSApiActivitiesImpl implements IICSApiActivities {
     }
 
     @Override
-    public ExportMeteringJobResponse meteringJobStatus(String podURL, String sessionId, String jobId, int maxRetries, long delayMillis) {
+    public ExportMeteringJobResponse meteringJobStatusCheck(String podURL, String sessionId, String jobId) {
 
-        String meteringJobStatusURL = podURL + "/public/core/v3/license/metering/ExportMeteringData/" + jobId;
-        log.info("Checking metering job status");
-        log.info("Metering job status URL: {}", meteringJobStatusURL);
+        String meteringJobStatusURL = podURL + exportMeteringDataURI +"/" + jobId;
+
+        log.debug("Checking metering job status: meteringJobStatusURL={}", meteringJobStatusURL);
 
         ExportMeteringJobResponse exportMeteringJobResponse = null;
         int retries = 0;
@@ -172,7 +188,7 @@ public class IICSApiActivitiesImpl implements IICSApiActivities {
                 headers.add("INFA-SESSION-ID", sessionId);
 
                 // Make the HTTP GET request
-                ResponseEntity response = ApiCall.callApi(method, meteringJobStatusURL, null, headers, ExportMeteringJobResponse.class);
+                ResponseEntity  response = ApiCall.callApi(method, meteringJobStatusURL, null, headers, ExportMeteringJobResponse.class);
                 exportMeteringJobResponse = (ExportMeteringJobResponse) response.getBody();
 
                 if (exportMeteringJobResponse != null && "SUCCESS".equalsIgnoreCase(exportMeteringJobResponse.getStatus())) {
@@ -193,7 +209,7 @@ public class IICSApiActivitiesImpl implements IICSApiActivities {
 
             // Sleep before next retry
             try {
-                Thread.sleep(delayMillis);
+                Thread.sleep(delaySecondsBetweenRetries*1000);
             } catch (InterruptedException e) {
                 log.warn("Sleep was interrupted");
             }
@@ -225,5 +241,9 @@ public class IICSApiActivitiesImpl implements IICSApiActivities {
        }
         return false;
     }
+
+
+
+
 }
 

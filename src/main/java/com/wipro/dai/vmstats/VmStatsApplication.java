@@ -1,37 +1,17 @@
 package com.wipro.dai.vmstats;
 
-import com.wipro.dai.vmstats.exception.VirtualMachineNotFoundException;
-import com.wipro.dai.vmstats.model.IICS.ExportMeteringJobBody;
-import com.wipro.dai.vmstats.model.IICS.ExportMeteringJobResponse;
-import com.wipro.dai.vmstats.model.IICS.LoginResponse;
-import com.wipro.dai.vmstats.model.IICS.Product;
-import com.wipro.dai.vmstats.model.VMStatsData;
-import com.wipro.dai.vmstats.service.iics.IICSApiActivities;
 import com.wipro.dai.vmstats.service.UsageDetailService;
 import com.wipro.dai.vmstats.service.VMStatsService;
 import com.wipro.dai.vmstats.service.VirtualMachineServiceImpl;
-import com.wipro.dai.vmstats.service.iics.IICSDataService;
+import com.wipro.dai.vmstats.service.iics.IICSApiActivities;
 import com.wipro.dai.vmstats.service.iics.IICSService;
-import com.wipro.dai.vmstats.util.FileProcessor;
-import com.wipro.dai.vmstats.util.ZipExtractor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
-
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.Date;
-import java.util.List;
 
 @SpringBootApplication
 @EnableScheduling
@@ -50,6 +30,8 @@ public class VmStatsApplication implements CommandLineRunner {
 
 	@Autowired
 	private IICSService iicsService;
+
+
 	final Logger log = LoggerFactory.getLogger(VmStatsApplication.class);
 
 	public static void main(String[] args) {
@@ -76,36 +58,50 @@ public class VmStatsApplication implements CommandLineRunner {
 //		virtualMachineService.createVirtualMachine(vm2);
 //		virtualMachineService.createVirtualMachine(vm3);
 //
-		virtualMachineService.registerMachine();
+//		virtualMachineService.registerMachine();
+//		iicsService.updateActivityLog();
+//		System.out.println(iicsApiActivities.DownloadActivityLog("https://usw1.dmp-us.informaticacloud.com/saas","jx4FMcoAAKjlps7DUl4lgv",10));
 
-
-	}
-
-	//@Scheduled(cron = "0 0 12 * * ?") // Executes daily at 12:00 PM
-	@Scheduled(fixedRate = 20000)
-	public void updateVmStatsPeriodically() {
+		iicsService.updateActivityLog();
 		try {
-			log.info("Updating VM stats. Start time: {}",  LocalDateTime.now());
-			VMStatsData vmstats = vmStatsService.getVMStats();
-			usageDetailService.updateVMStats( vmstats);
-			log.info("VM stats updated: {}", vmstats);
-		} catch (VirtualMachineNotFoundException | InterruptedException |
-                 IOException | URISyntaxException e) {
-			log.error( e.getMessage());
-
-		}
-	}
-
-
-	@Scheduled(fixedRate = 10000)
-	public void updateIICSMeterUsagePeriodically() {
-		try {
-			log.info("Updating IICS meter usage. Start time: {}",  LocalDateTime.now());
 			iicsService.updateMeterUsage();
-
-		} catch (Exception e) {
-			log.error( e.getMessage());
-
+		}catch (Exception e){
+			log.error(e.getMessage());
 		}
+		System.out.println("Done...");
+
 	}
+
+
+
+//	@Scheduled(fixedRate = 10000)
+//	public void updateVmStatsPeriodically() {
+//		try {
+//			log.info("Updating VM stats. Start time: {}",  LocalDateTime.now());
+//			VMStatsData vmstats = vmStatsService.getVMStats();
+//			usageDetailService.updateVMStats( vmstats);
+//			log.info("VM stats updated: {}", vmstats);
+//		} catch (VirtualMachineNotFoundException | InterruptedException |
+//                 IOException | URISyntaxException e) {
+//			log.error( e.getMessage());
+//
+//		}
+//	}
+
+
+//	@Scheduled(cron = "0 0 12 * * ?")
+//		@Scheduled(fixedRate = 10000)
+//	public void updateIICSMeterUsagePeriodically() {
+//		try {
+//			log.info("Updating IICS meter usage. Start time: {}",  LocalDateTime.now());
+//			iicsService.updateMeterUsage();
+//
+//		} catch (Exception e) {
+//			log.error( e.getMessage());
+//
+//		}
+//	}
+
+
+
 }
