@@ -30,6 +30,14 @@ public class IICSServiceImpl implements IICSService{
     @Value("${iics.schedules.reportsFromLastNDays}")
     private String reportsFromLastNDays;
 
+    @Value("${iics.schedules.activityLogRowLimit}")
+    private String activityLogRowLimit;
+
+    @Value("${iics.schedules.jobLevelDataMeterid}")
+    private String jobLevelDataMeterid;
+
+
+
     @Autowired
     private IICSApiActivities iicsApiActivities;
 
@@ -38,7 +46,7 @@ public class IICSServiceImpl implements IICSService{
     @Autowired
     ActivityLogEntryRepository activityLogEntryRepository;
     @Override
-    public void updateMeterUsage() throws IICSLoginException, ExportMeteringJobException, InterruptedException, ConfigFileException {
+    public void updateIPUUsage() throws IICSLoginException, ExportMeteringJobException, InterruptedException, ConfigFileException {
         String meterFile = "meter_response_" + new SimpleDateFormat("dd_MM_yy_HH_mm").format(new Date()) + ".zip";
         String meterDirectory = "meter_reports/"+new SimpleDateFormat("dd_MM_yy").format(new Date())+"/";
 
@@ -57,9 +65,9 @@ public class IICSServiceImpl implements IICSService{
                 System.out.println("sessionId:" + sessionId);
                 System.out.println("baseApiUrl:" + baseApiUrl);
 
-                ExportMeteringJobBody exportMeteringJobBody = new ExportMeteringJobBody();
+                MeteringJobBody meteringJobBody = new MeteringJobBody();
 
-                exportMeteringJobBody.setCombinedMeterUsage("FALSE");
+                meteringJobBody.setCombinedMeterUsage("FALSE");
 
                 LocalDateTime currentDateTime = LocalDateTime.now();
                 long reportsFromLastNDayss;
@@ -76,10 +84,12 @@ public class IICSServiceImpl implements IICSService{
 
                 LocalDateTime endDate = LocalDateTime.now(ZoneOffset.UTC);
 
-                exportMeteringJobBody.setStartDate(startDate);
-                exportMeteringJobBody.setEndDate(endDate);
+                meteringJobBody.setStartDate(startDate);
+                meteringJobBody.setEndDate(endDate);
+                log.debug("Metering job body for IPU:"+meteringJobBody);
+                System.out.println("Metering job body for IPU:"+meteringJobBody);
 
-                ExportMeteringJobResponse exportMeteringJobResponse = iicsApiActivities.exportMeteringDataAllLinkedOrgsAcrossRegion(baseApiUrl, sessionId, exportMeteringJobBody);
+                ExportMeteringJobResponse exportMeteringJobResponse = iicsApiActivities.exportMeteringDataAllLinkedOrgsAcrossRegion(baseApiUrl, sessionId, meteringJobBody);
 
                 if (exportMeteringJobResponse.isRequestSuccessful()) {
                     log.info("Export job ran successfully.");
@@ -94,7 +104,7 @@ public class IICSServiceImpl implements IICSService{
                                 log.debug("List of files to process:"+filePaths);
                                 if (filePaths != null) {
 
-                                    filePaths.forEach(file -> iicsDataService.saveMeterUsageData(Paths.get(meterDirectory + file.getFileName())));
+                                    filePaths.forEach(file -> iicsDataService.saveIPUMeterUsageData(Paths.get(meterDirectory + file.getFileName())));
 
 
                                 }else{
@@ -142,7 +152,7 @@ public class IICSServiceImpl implements IICSService{
             if (firstProduct != null && sessionId!=null) {
 
                 String baseApiUrl = firstProduct.getBaseApiUrl();
-                String apiUrl = baseApiUrl+"/api/v2/activity/activityLog?rowLimit=20";
+                String apiUrl = baseApiUrl+"/api/v2/activity/activityLog?rowLimit="+activityLogRowLimit;
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.APPLICATION_JSON);
                 headers.add("icSessionId", sessionId);
@@ -200,6 +210,104 @@ public class IICSServiceImpl implements IICSService{
         tableRow.setType(dto.getType());
 
         return tableRow;
+    }
+
+    @Override
+    public void updateMeteringAuditData() throws IICSLoginException, InterruptedException, ConfigFileException, ExportMeteringJobException {
+
+        String auditFile = "audit_response_" + new SimpleDateFormat("dd_MM_yy_HH_mm").format(new Date()) + ".zip";
+        String auditDirectory = "audit_reports/"+new SimpleDateFormat("dd_MM_yy").format(new Date())+"/";
+
+        LoginResponse loginResponse = iicsApiActivities.login();
+
+        if(loginResponse.isLoginSuccess()){
+            System.out.println("Login successful");
+
+            Product firstProduct =loginResponse.getProducts().stream().findFirst().orElse(null);
+            String sessionId=loginResponse.getUserInfo().getSessionId();
+
+            if (firstProduct != null && sessionId!=null) {
+
+                String baseApiUrl = firstProduct.getBaseApiUrl();
+
+                System.out.println("sessionId:" + sessionId);
+                System.out.println("baseApiUrl:" + baseApiUrl);
+
+                MeteringJobBody meteringJobBody = new MeteringJobBody();
+
+                meteringJobBody.setAllMeters("FALSE");
+
+                LocalDateTime currentDateTime = LocalDateTime.now();
+
+                long reportsFromLastNDayss;
+                try {
+                    reportsFromLastNDayss = Long.parseLong(reportsFromLastNDays);
+                } catch (NumberFormatException e) {
+
+                    log.error("Bad property [reportsFromLastNDayss:{}] in the configuration file.", reportsFromLastNDays);
+                    throw new ConfigFileException("Bad property reportsFromLastNDayss:{} in the configuration file.", reportsFromLastNDays);
+
+                }
+
+                LocalDateTime startDate = currentDateTime.minusDays(reportsFromLastNDayss);
+
+                LocalDateTime endDate = LocalDateTime.now(ZoneOffset.UTC);
+
+                meteringJobBody.setStartDate(startDate);
+                meteringJobBody.setEndDate(endDate);
+                meteringJobBody.setMeterId(jobLevelDataMeterid);
+
+                log.debug("Metering job body for Audit Data:"+meteringJobBody);
+                System.out.println("Metering job body for Audit Data:"+meteringJobBody);
+
+                ExportMeteringJobResponse exportMeteringJobResponse = iicsApiActivities.exportServiceJobLevelMeteringData(baseApiUrl, sessionId, meteringJobBody);
+
+                if (exportMeteringJobResponse.isRequestSuccessful()) {
+                    log.info("Export job ran successfully.");
+                    ExportMeteringJobResponse jobResponse = iicsApiActivities.meteringJobStatusCheck(baseApiUrl, sessionId, exportMeteringJobResponse.getJobId());
+                    if (jobResponse.isRequestSuccessful()) {
+                        if (iicsApiActivities.DownloadMeterResponse(baseApiUrl, sessionId, jobResponse.getJobId(), auditFile, 2, 1000)) {
+                            log.debug("Meter response file was downloaded.");
+                            boolean meterReportExtracted = ZipExtractor.extractZipFile(auditFile, auditDirectory);
+
+                            if (meterReportExtracted) {
+                                List<Path> filePaths = FileProcessor.listFilesInDirectory(auditDirectory);
+                                log.debug("List of files to process:"+filePaths);
+                                if (filePaths != null) {
+
+                                    filePaths.forEach(file -> iicsDataService.saveAuditData(Paths.get(auditDirectory + file.getFileName())));
+
+
+                                }else{
+                                    log.warn("No files were found to be processed :"+filePaths);
+                                }
+
+
+                            } else {
+                                log.error("Issue extracting the meter report.");
+                            }
+
+                        } else {
+                            log.error("Metering file download issue");
+                        }
+
+                    }else {
+                        log.warn("Meter job did not finish during the time window specified.");
+                    }
+
+
+                }
+
+
+            } else {
+                log.error("Unable to get baseURL after login.");
+            }
+
+        }else {
+            System.out.println("Login failed.");
+        }
+
+
     }
 
 }

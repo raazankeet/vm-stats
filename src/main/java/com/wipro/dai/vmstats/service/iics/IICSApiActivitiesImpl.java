@@ -31,6 +31,10 @@ public class IICSApiActivitiesImpl implements IICSApiActivities {
     private String password;
     @Value("${iics.urls.allorgURI}")
     private String allorgURI;
+
+    @Value("${iics.urls.jobLevelMeterURI}")
+    private String jobLevelMeterURI;
+
     @Value("${iics.urls.loginURI}")
     private String loginURI;
     @Value("${iics.urls.logoutURI}")
@@ -122,26 +126,25 @@ public class IICSApiActivitiesImpl implements IICSApiActivities {
     @Override
     public ExportMeteringJobResponse exportMeteringDataAllLinkedOrgsAcrossRegion(
             String podURL, String sessionId,
-            ExportMeteringJobBody exportMeteringJobBody)
-            throws IICSLoginException, ExportMeteringJobException {
-        String exportURL = podURL
-                + allorgURI;
+            MeteringJobBody meteringJobBody)
+            throws ExportMeteringJobException {
+        String exportURL = podURL + allorgURI;
 
 
                 log.debug("Performing ExportMeteringDataAllLinkedOrgsAcrossRegion: " +
                                 "exportURL={}, exportMeteringJobBody={}",
-                        exportURL, exportMeteringJobBody);
+                        exportURL, meteringJobBody);
 
         String method = "post";
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        //        headers.setAccept((List<MediaType>) MediaType.APPLICATION_JSON);
+
         headers.add("INFA-SESSION-ID", sessionId);
 
         try {
             // Make the HTTP POST request
             ResponseEntity response = ApiCall.callApi(method, exportURL,
-                    exportMeteringJobBody, headers, ExportMeteringJobResponse.class);
+                    meteringJobBody, headers, ExportMeteringJobResponse.class);
 
             // Retrieve response body
             ExportMeteringJobResponse exportMeteringJobResponse =
@@ -242,7 +245,55 @@ public class IICSApiActivitiesImpl implements IICSApiActivities {
         return false;
     }
 
+    @Override
+    public ExportMeteringJobResponse exportServiceJobLevelMeteringData(String podURL, String sessionId,
+                                                                        MeteringJobBody meteringJobBody)
+            throws ExportMeteringJobException {
+        String exportURL = podURL + jobLevelMeterURI;
 
+
+            log.debug("Performing ExportMeteringDataAllLinkedOrgsAcrossRegion: " +
+                            "exportURL={}, exportMeteringJobBody={}",
+                    exportURL, meteringJobBody);
+
+            String method = "post";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            headers.add("INFA-SESSION-ID", sessionId);
+
+            try {
+                // Make the HTTP POST request
+                ResponseEntity response = ApiCall.callApi(method, exportURL,
+                        meteringJobBody, headers, ExportMeteringJobResponse.class);
+
+                // Retrieve response body
+                ExportMeteringJobResponse exportMeteringJobResponse =
+                        (ExportMeteringJobResponse) response.getBody();
+
+                exportMeteringJobResponse.setRequestSuccessful(true);
+
+                return exportMeteringJobResponse;
+            } catch (HttpClientErrorException ex) {
+                // Handle HTTP error response
+                log.error("HTTP error occurred during exportMeteringData: "
+                        + ex.getStatusCode() + ", " + ex.getStatusText());
+                ExportMeteringJobResponse response = new ExportMeteringJobResponse();
+
+                response.setErrorMessage(ex.getStatusText());
+                response.setRequestSuccessful(false);
+
+                return response;
+
+            } catch (Exception ex) {
+                // Handle other exceptions
+                log.error("An error occurred during ExportMeteringJobException: "
+                        + ex.getMessage());
+                throw new ExportMeteringJobException(
+                        "An error occurred during ExportMeteringJobException"
+                                + ex.getMessage());
+            }
+    }
 
 
 }

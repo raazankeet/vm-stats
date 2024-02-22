@@ -9,7 +9,7 @@ import java.util.Date;
 
 @Data
 @Entity
-@Table(name = "iics_meter_usage")
+@Table(name = "iics_ipu_meter_usage")
 public class MeterUsage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

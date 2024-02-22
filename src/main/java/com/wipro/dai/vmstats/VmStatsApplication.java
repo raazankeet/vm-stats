@@ -64,7 +64,8 @@ public class VmStatsApplication implements CommandLineRunner {
 
 		iicsService.updateActivityLog();
 		try {
-			iicsService.updateMeterUsage();
+			iicsService.updateIPUUsage();
+			iicsService.updateMeteringAuditData();
 		}catch (Exception e){
 			log.error(e.getMessage());
 		}

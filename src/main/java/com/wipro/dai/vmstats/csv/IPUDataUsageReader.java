@@ -18,9 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
-public class MeterUsageReader {
+public class IPUDataUsageReader {
 
-    public  static List<MeterUsage> readMeterUsageCSV(Path filePath) throws ReportFileReadException {
+    public  static List<MeterUsage> readIPUMeterUsageCSV(Path filePath) throws ReportFileReadException {
         List<MeterUsage> meterUsageList = new ArrayList<>();
         try (Reader reader = new FileReader(filePath.toFile());
              CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
@@ -52,7 +52,7 @@ public class MeterUsageReader {
                     throw new ReportFileReadException("Error processing (IllegalArgumentException) CSV record at line " + csvRecord.getRecordNumber() + ": " + e.getMessage());
                 }
             }
-        } catch (IOException | ReportFileReadException e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Error reading CSV file: " + e.getMessage());
             throw new ReportFileReadException("Error reading CSV file: " + e.getMessage());
         }

@@ -14,8 +14,9 @@ public interface IICSApiActivities {
     public LoginResponse login() throws IICSLoginException, HttpClientErrorException;
     public boolean logout(String sessionId) throws HttpClientErrorException, IICSLogoutException;
 
-    public ExportMeteringJobResponse exportMeteringDataAllLinkedOrgsAcrossRegion(String baseApiUrl,String sessionId, ExportMeteringJobBody exportMeteringJobBody) throws IICSLoginException, ExportMeteringJobException;
+
+    public ExportMeteringJobResponse exportMeteringDataAllLinkedOrgsAcrossRegion(String baseApiUrl,String sessionId, MeteringJobBody meteringJobBody) throws IICSLoginException, ExportMeteringJobException;
     public ExportMeteringJobResponse meteringJobStatusCheck(String podURL, String sessionId, String jobId) throws IICSLoginException, ExportMeteringJobException, InterruptedException;
     public boolean DownloadMeterResponse(String podURL, String sessionId, String jobId,String meterFile,int maxRetries,long delayMillis);
-//    public List<ActivityLogEntryResponse> DownloadActivityLog(String podURL, String sessionId, int rowLimit);
+    public ExportMeteringJobResponse exportServiceJobLevelMeteringData(String baseApiUrl, String sessionId, MeteringJobBody meteringJobBody) throws IICSLoginException, ExportMeteringJobException;
 }
